@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+*.so
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Poetry
+# poetry.lock is intentionally tracked
+
+# Distribution / packaging
+*.tar.gz
+*.whl
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Hugging Face model cache (large files, not for VCS)
+.cache/
+models/
+
+# Temp audio files
+*.wav.tmp
+
+# Jupyter
+.ipynb_checkpoints/
