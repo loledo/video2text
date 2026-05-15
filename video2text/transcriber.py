@@ -50,7 +50,7 @@ def transcribe(
     resolved_model = model_id or _DEFAULT_MODELS.get(device, "openai/whisper-small")
     dtype = torch.float16 if device in ("cuda", "mps") else torch.float32
 
-    log.info("Device: %s  |  Model: %s", device, resolved_model)
+    log.info("Whisper device: %s  |  model: %s  |  dtype: %s", device.upper(), resolved_model, dtype)
 
     log.info("Loading model weights...")
     model = AutoModelForSpeechSeq2Seq.from_pretrained(

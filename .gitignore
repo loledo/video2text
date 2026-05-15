@@ -1,3 +1,6 @@
+# Secrets
+.env
+
 # Python
 __pycache__/
 *.py[cod]
@@ -46,6 +49,9 @@ models/
 *.mp4
 *.json
 *.txt
+*.jpeg
+*.jpg
 
 # Jupyter
 .ipynb_checkpoints/
+output.md

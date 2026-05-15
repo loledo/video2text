@@ -6,6 +6,10 @@ import os
 import sys
 from pathlib import Path
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 from agent import chunk_store
 from agent.travel_agent import TravelAgent
 

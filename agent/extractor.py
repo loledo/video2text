@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import re
 import subprocess
 import shutil
 import tempfile
@@ -19,6 +20,23 @@ IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp"}
 VIDEO_EXTS = {".mp4", ".mov", ".avi", ".webm", ".mkv"}
 
 SHORT_VIDEO_THRESHOLD_S = 90.0
+MIN_SPEECH_WORDS = 8
+_MUSIC_PATTERN = re.compile(r"[♪♫♩♬]|\[music\]|\[applause\]|\[laughter\]|\(music", re.IGNORECASE)
+
+
+def _is_music_or_noise(whisper_result: dict) -> bool:
+    """Return True when Whisper output is background music or ambient noise rather than speech."""
+    text = whisper_result.get("text", "").strip()
+    if not text:
+        return True
+    clean = _MUSIC_PATTERN.sub("", text).strip()
+    word_count = sum(1 for w in clean.split() if any(c.isalpha() for c in w))
+    if word_count < MIN_SPEECH_WORDS:
+        return True
+    music_hits = len(_MUSIC_PATTERN.findall(text))
+    if music_hits / max(1, len(text.split())) > 0.3:
+        return True
+    return False
 
 
 def _find_ffprobe() -> str:
@@ -103,7 +121,7 @@ def _merge_results(audio_result: dict, visual_result: dict, filename: str) -> di
     return merged
 
 
-def extract_file(file_path: str | Path, chunks_dir: str | Path) -> dict:
+def extract_file(file_path: str | Path, chunks_dir: str | Path, device: str = "auto") -> dict:
     """
     Extract travel knowledge from a single image or video file.
 
@@ -141,7 +159,7 @@ def extract_file(file_path: str | Path, chunks_dir: str | Path) -> dict:
     try:
         if is_image:
             log.info("File is an image — using visual extractor.")
-            result = extract_visual_text(str(file_path), filename)
+            result = extract_visual_text(str(file_path), filename, device=device)
 
         else:
             # Video path
@@ -149,26 +167,31 @@ def extract_file(file_path: str | Path, chunks_dir: str | Path) -> dict:
 
             if not audio_present:
                 log.info("Video has no audio stream — using visual extractor only.")
-                result = extract_visual_text(str(file_path), filename)
+                result = extract_visual_text(str(file_path), filename, device=device)
             else:
                 duration_s = _get_video_duration(file_path)
-                log.info("Video has audio. Duration: %s s", duration_s)
+                log.info("Video has audio. Duration: %.1f s", duration_s or 0)
 
                 # Always run Whisper
                 wav_path = None
                 try:
                     wav_path = extract_audio(str(file_path))
-                    whisper_result = transcribe(wav_path, return_timestamps=True)
+                    whisper_result = transcribe(wav_path, device=device, return_timestamps=True)
                 finally:
                     if wav_path and os.path.exists(wav_path):
                         os.unlink(wav_path)
 
                 audio_result = process_transcription(whisper_result, filename, duration_s)
 
-                # Also run visual extractor for short clips
-                if duration_s is not None and duration_s < SHORT_VIDEO_THRESHOLD_S:
-                    log.info("Short clip (%.1fs < %.0fs) — also running visual extractor.", duration_s, SHORT_VIDEO_THRESHOLD_S)
-                    visual_result = extract_visual_text(str(file_path), filename)
+                no_speech = _is_music_or_noise(whisper_result)
+                short_clip = duration_s is not None and duration_s < SHORT_VIDEO_THRESHOLD_S
+                if no_speech:
+                    log.info("No speech detected (music/noise) — forcing visual extraction.")
+                run_visual = short_clip or no_speech
+                if run_visual:
+                    if short_clip and not no_speech:
+                        log.info("Short clip (%.1fs) — also running visual extractor.", duration_s)
+                    visual_result = extract_visual_text(str(file_path), filename, device=device)
                     result = _merge_results(audio_result, visual_result, filename)
                 else:
                     result = audio_result
