@@ -7,6 +7,8 @@ readme = "README.md"
 
 [tool.poetry.scripts]
 transcribe = "transcribe:main"
+process-videos = "process_videos:main"
+waypoint = "chat:main"
 
 [tool.poetry.dependencies]
 python = "^3.11"
@@ -17,6 +19,11 @@ accelerate = ">=0.30.0"
 soundfile = ">=0.12.1"
 tqdm = ">=4.60.0"
 imageio-ffmpeg = ">=0.4.9"
+anthropic = ">=0.25.0"
+tavily-python = ">=0.3.0"
+timm = ">=0.9.0"
+einops = ">=0.7.0"
+Pillow = ">=10.0.0"
 
 
 [build-system]
